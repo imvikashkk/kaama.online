@@ -164,11 +164,8 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
         @media (min-width: 640px) { .upi-panel { animation: upiPop .3s cubic-bezier(.22,1,.36,1) both; } }
       `}</style>
 
-      <div
-        className="upi-backdrop absolute inset-0"
-        style={{ background: 'rgba(12,8,9,.8)' }}
-        onClick={canClose ? onClose : undefined}
-      />
+      {/* Backdrop is inert on purpose — only the ✕ button closes the sheet */}
+      <div className="upi-backdrop absolute inset-0" style={{ background: 'rgba(12,8,9,.8)' }} />
 
       <div
         role="dialog"
