@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { txnId, amount: plan.price },
+      // Present for hosted-checkout gateways (SabPaisa) — the client redirects there full page
+      data: { txnId, amount: plan.price, checkoutUrl: order.checkoutUrl ?? null },
     });
   } catch (err) {
     console.error('payment/initiate error:', err);

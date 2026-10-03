@@ -47,6 +47,15 @@ export default function SubscriptionsPage() {
   const router = useRouter();
   const sel = plans.find((p) => p.id === selected) ?? null;
 
+  // Back from the gateway's checkout restores this page from bfcache with the button still spinning
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setPaying(false);
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
+
   useEffect(() => {
     // Check subscription via API (cookie-based auth)
     fetch('/api/user/profile')
@@ -133,7 +142,10 @@ export default function SubscriptionsPage() {
         return;
       }
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data.checkoutUrl) {
+        // SabPaisa checkout opens full page; it returns to /payment/return → /payment/status
+        window.location.href = data.data.checkoutUrl;
+      } else if (data.success) {
         setPayTxnId(data.data.txnId);
       } else {
         setError(data.message ?? 'Payment failed. Try again.');
