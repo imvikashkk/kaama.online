@@ -17,14 +17,13 @@ interface OrderInfo {
 const POLL_MS = 3000;
 
 // PhonePe is the only app that reliably accepts this gateway's intent links — GPay / Paytm / BHIM were dropped.
-// Android gets an intent:// URL pinned to the app's package (more reliable than the custom scheme); iOS keeps the scheme.
-const PHONEPE = { name: 'PhonePe', icon: '/upi/phonepe.png', scheme: 'phonepe://pay', pkg: 'com.phonepe.app' };
+// Keep the plain phonepe:// scheme: an Android intent:// URL pinned to the package stopped PhonePe from opening the payment.
+const PHONEPE = { name: 'PhonePe', icon: '/upi/phonepe.png', scheme: 'phonepe://pay' };
 
-type Platform = { android: boolean; mobile: boolean; inApp: boolean };
+type Platform = { mobile: boolean; inApp: boolean };
 
-function appLink(upiLink: string, app: typeof PHONEPE, android: boolean) {
+function appLink(upiLink: string, app: typeof PHONEPE) {
   const q = upiLink.split('?')[1] ?? '';
-  if (android) return `intent://pay?${q}#Intent;scheme=upi;package=${app.pkg};end`;
   return `${app.scheme}?${q}`;
 }
 
@@ -32,7 +31,6 @@ function appLink(upiLink: string, app: typeof PHONEPE, android: boolean) {
 function detectPlatform(): Platform {
   const ua = navigator.userAgent;
   return {
-    android: /Android/i.test(ua),
     mobile: /Android|iPhone|iPad|iPod/i.test(ua),
     inApp: /FBAN|FBAV|FB_IAB|Instagram|Snapchat|Line\/|; wv\)/i.test(ua),
   };
@@ -50,7 +48,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
   const [msg, setMsg] = useState('');
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [left, setLeft] = useState<number | null>(null);
-  const [platform, setPlatform] = useState<Platform>({ android: false, mobile: true, inApp: false });
+  const [platform, setPlatform] = useState<Platform>({ mobile: true, inApp: false });
   const doneRef = useRef(false);
   const busyRef = useRef(false);
 
@@ -273,7 +271,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
             )}
 
             <a
-              href={appLink(order.upiLink, PHONEPE, platform.android)}
+              href={appLink(order.upiLink, PHONEPE)}
               className="flex items-center justify-center gap-3 w-full h-14 mb-5 rounded-md text-[15px] font-extrabold no-underline transition-transform active:scale-[.98]"
               style={{ background: YELLOW, color: INK, boxShadow: `4px 4px 0 ${RED}` }}
             >
