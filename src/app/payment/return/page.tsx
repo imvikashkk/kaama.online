@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-// Hosted checkout returnUrl (SabPaisa / MeraOTP) — hands over to /payment/status, which verifies and activates the subscription
+// SabPaisa checkout's returnUrl — hands over to /payment/status, which verifies and activates the subscription
 export default function PaymentReturnPage() {
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);

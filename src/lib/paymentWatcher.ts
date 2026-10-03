@@ -20,7 +20,7 @@ export async function settleUpiOrder(
   expectedAmount: number,
   req: NextRequest | null,
 ): Promise<SettleResult> {
-  const check = await getUpiOrderStatus(txnId, expectedAmount);
+  const check = await getUpiOrderStatus(txnId);
   if (!check) return { state: 'pending' };
 
   if (check.failed) {
