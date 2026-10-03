@@ -10,8 +10,10 @@ function headers(extra: Record<string, string> = {}) {
   };
 }
 
+type SendResult = { messageId: string } | { messageId: null; rateLimited: boolean };
+
 // MeraOTP generates + delivers the OTP; returns message_id needed for verification
-export async function sendOtp(mobile: string): Promise<string | null> {
+export async function sendOtp(mobile: string): Promise<SendResult> {
   try {
     const res = await fetch(`${BASE_URL}/send`, {
       method: 'POST',
@@ -26,12 +28,12 @@ export async function sendOtp(mobile: string): Promise<string | null> {
     const result = await res.json().catch(() => null);
     if (!res.ok || !result?.success || !result.data?.message_id) {
       console.error('MeraOTP send failed:', res.status, result);
-      return null;
+      return { messageId: null, rateLimited: res.status === 429 };
     }
-    return result.data.message_id;
+    return { messageId: result.data.message_id };
   } catch (err) {
     console.error('MeraOTP send error:', err);
-    return null;
+    return { messageId: null, rateLimited: false };
   }
 }
 

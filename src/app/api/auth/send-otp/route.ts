@@ -78,13 +78,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, isSubscribed: true });
       }
 
-      const messageId = await sendOtp(mobile);
-      if (!messageId) {
+      const sent = await sendOtp(mobile);
+      if (!sent.messageId) {
+        if ('rateLimited' in sent && sent.rateLimited) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                'Bahut zyada OTP requests ho gayi. Thodi der baad try karo.',
+            },
+            { status: 429 },
+          );
+        }
         return NextResponse.json(
-          { success: false, message: 'OTP send nahi ho saka. Please try again.' },
+          {
+            success: false,
+            message: 'OTP send nahi ho saka. Please try again.',
+          },
           { status: 502 },
         );
       }
+      const messageId = sent.messageId;
       await pool.query(
         `INSERT INTO otps (mobile, message_id, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')`,
         [mobile, messageId],
