@@ -16,17 +16,26 @@ interface OrderInfo {
 
 const POLL_MS = 3000;
 
-// App-specific intent schemes built from the gateway's generic upi:// link
-const UPI_APPS = [
-  { name: 'GPay', icon: '/upi/gpay.png', scheme: 'tez://upi/pay' },
-  { name: 'PhonePe', icon: '/upi/phonepe.png', scheme: 'phonepe://pay' },
-  { name: 'Paytm', icon: '/upi/paytm.png', scheme: 'paytmmp://pay' },
-  { name: 'BHIM', icon: '/upi/bhim.png', scheme: 'upi://pay' },
-];
+// PhonePe is the only app that reliably accepts this gateway's intent links — GPay / Paytm / BHIM were dropped.
+// Android gets an intent:// URL pinned to the app's package (more reliable than the custom scheme); iOS keeps the scheme.
+const PHONEPE = { name: 'PhonePe', icon: '/upi/phonepe.png', scheme: 'phonepe://pay', pkg: 'com.phonepe.app' };
 
-function appLink(upiLink: string, scheme: string) {
+type Platform = { android: boolean; mobile: boolean; inApp: boolean };
+
+function appLink(upiLink: string, app: typeof PHONEPE, android: boolean) {
   const q = upiLink.split('?')[1] ?? '';
-  return `${scheme}?${q}`;
+  if (android) return `intent://pay?${q}#Intent;scheme=upi;package=${app.pkg};end`;
+  return `${app.scheme}?${q}`;
+}
+
+// Instagram / Facebook / other in-app webviews usually swallow upi:// links
+function detectPlatform(): Platform {
+  const ua = navigator.userAgent;
+  return {
+    android: /Android/i.test(ua),
+    mobile: /Android|iPhone|iPad|iPod/i.test(ua),
+    inApp: /FBAN|FBAV|FB_IAB|Instagram|Snapchat|Line\/|; wv\)/i.test(ua),
+  };
 }
 
 function formatLeft(ms: number) {
@@ -41,6 +50,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
   const [msg, setMsg] = useState('');
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [left, setLeft] = useState<number | null>(null);
+  const [platform, setPlatform] = useState<Platform>({ android: false, mobile: true, inApp: false });
   const doneRef = useRef(false);
   const busyRef = useRef(false);
 
@@ -141,6 +151,10 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
     tick();
     return () => clearInterval(id);
   }, [state, order, verify, fail]);
+
+  useEffect(() => {
+    setPlatform(detectPlatform());
+  }, []);
 
   // Lock background scroll while open
   useEffect(() => {
@@ -245,43 +259,37 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
 
             <div className="my-4" style={{ borderTop: `2px dashed ${LINE}` }} />
 
-            <p className="m-0 mb-3 text-[13px] font-bold text-white">UPI app se pay karo</p>
-            <div className="grid grid-cols-4 gap-2 mb-2">
-              {UPI_APPS.map((app) => (
-                <a
-                  key={app.name}
-                  href={appLink(order.upiLink, app.scheme)}
-                  className="flex flex-col items-center gap-1.5 rounded-md pt-2.5 pb-2 no-underline transition-colors active:scale-95 hover:bg-white/5"
-                  style={{ border: `1px solid ${LINE}` }}
-                >
-                  {/* Uniform white tile — the source logos have mixed backgrounds */}
-                  <span className="w-11 h-11 rounded-md bg-white flex items-center justify-center overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={app.icon} alt={app.name} className="w-9 h-9 object-contain" />
-                  </span>
-                  <span className="text-white/75 text-[11px] font-medium">{app.name}</span>
-                </a>
-              ))}
-            </div>
+            {/* Only PhonePe accepts this merchant's order-tagged payments without a risk block */}
+            <p className="m-0 mb-3 flex items-center justify-center gap-2 text-[13px] font-bold text-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={PHONEPE.icon} alt="" className="w-5 h-5 rounded-sm bg-white object-contain" />
+              Only PhonePe supported
+            </p>
+
+            {platform.inApp && (
+              <p className="m-0 mb-3 rounded-md px-3 py-2 text-center text-[12px] font-semibold" style={{ background: 'rgba(250,204,21,.1)', border: `1px solid ${YELLOW}`, color: YELLOW }}>
+                Ye page Chrome me kholo — yahan PhonePe nahi khulega
+              </p>
+            )}
+
             <a
-              href={order.upiLink}
-              className="flex items-center justify-center gap-2.5 w-full h-12 rounded-md text-[14px] font-extrabold no-underline mb-4 transition-transform active:scale-[.98]"
+              href={appLink(order.upiLink, PHONEPE, platform.android)}
+              className="flex items-center justify-center gap-3 w-full h-14 mb-5 rounded-md text-[15px] font-extrabold no-underline transition-transform active:scale-[.98]"
               style={{ background: YELLOW, color: INK, boxShadow: `4px 4px 0 ${RED}` }}
             >
-              <span className="w-7 h-7 rounded-sm bg-white flex items-center justify-center overflow-hidden">
+              <span className="w-9 h-9 rounded-md bg-white flex items-center justify-center overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/upi/upi-other.jpg" alt="" className="w-6 h-6 object-contain" />
+                <img src={PHONEPE.icon} alt="" className="w-8 h-8 object-contain" />
               </span>
-              Koi aur UPI app
+              PhonePe se pay karo ₹{order.amount}
             </a>
 
-            {order.qrCode && (
-              <div className="flex items-center gap-4 rounded-md p-3 mb-4" style={{ border: `1px solid ${LINE}` }}>
+            {/* Desktop can't open the app — the same order QR, scanned with PhonePe on the phone */}
+            {!platform.mobile && order.qrCode && (
+              <div className="flex flex-col items-center mb-5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={order.qrCode} alt="UPI QR" className="w-28 h-28 shrink-0 rounded-sm bg-white p-1" />
-                <p className="m-0 text-[12px] leading-relaxed text-white/60">
-                  Doosre phone se ho? <span className="text-white font-semibold">Ye QR scan karo</span> kisi bhi UPI app se.
-                </p>
+                <img src={order.qrCode} alt="UPI QR" className="w-48 h-48 rounded-sm bg-white p-1.5" />
+                <p className="m-0 mt-2 text-[12px] text-white/60">PhonePe se scan karo</p>
               </div>
             )}
 
