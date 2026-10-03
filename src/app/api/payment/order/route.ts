@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { verifyUserToken } from '@/lib/userAuth';
 
-// Returns the UPI link / QR saved at initiate time so the pay page can render it (survives refresh)
+// Returns the UPI link / QR / checkout URL saved at initiate time so the pay page can render it (survives refresh)
 export async function GET(req: NextRequest) {
   try {
     const userId = verifyUserToken(req.cookies.get('mr_token')?.value);
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         payeeName: g.payeeName ?? '',
         upiLink: g.upiLink ?? '',
         qrCode: g.qrCode ?? '',
+        checkoutUrl: g.checkoutUrl ?? '',
         expiresAt: g.expiresAt ?? null,
       },
     });

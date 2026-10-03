@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const order = await createUpiOrder(Number(plan.price), `Kaama ${plan.name} U${userId}`);
+    const order = await createUpiOrder(Number(plan.price), `Kaama ${plan.name} U${userId}`, {
+      userId: Number(userId),
+      mobile: user.mobile ?? '',
+    });
 
     if ('error' in order) {
       return NextResponse.json(
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
         txnId,
         plan.price,
         campaignSlug || null,
-        order.orderId,
+        order.gatewayOrderId || order.orderId,
         fbp,
         fbc,
         metaCampaignId,

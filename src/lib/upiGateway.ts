@@ -1,17 +1,39 @@
-// Server-only client for the UPI gateway — URL comes from env and is never exposed to the browser
+// Server-only UPI gateway client — PAYMENT_PROVIDER=sabpaisa uses SabPaisa S2S, otherwise the legacy intent gateway
+import { createSabpaisaOrder, getSabpaisaOrderStatus } from './sabpaisa';
+
+const useSabpaisa = () => process.env.PAYMENT_PROVIDER === 'sabpaisa';
+
+// Legacy gateway URL comes from env and is never exposed to the browser
 const baseUrl = () => (process.env.PAYMENT_GATEWAY_URL ?? '').replace(/\/+$/, '');
 
 export interface UpiOrder {
   orderId: string;
+  gatewayOrderId?: string;
   amount: number;
   payeeName: string;
   vpa: string;
   upiLink: string;
   qrCode: string;
+  // Hosted checkout page (SabPaisa) — shown in an iframe instead of UPI app buttons
+  checkoutUrl?: string;
   expiresAt: string | null;
 }
 
-export async function createUpiOrder(amount: number, note: string): Promise<UpiOrder | { error: string }> {
+export interface UpiOrderStatus {
+  paid: boolean;
+  failed: boolean;
+  status: string;
+  gatewayTxnId: string | null;
+  amount: number;
+  raw: object;
+}
+
+export async function createUpiOrder(
+  amount: number,
+  note: string,
+  customer: { userId: number; mobile: string },
+): Promise<UpiOrder | { error: string }> {
+  if (useSabpaisa()) return createSabpaisaOrder(amount, note, customer);
   try {
     const res = await fetch(`${baseUrl()}/api/payment/create`, {
       method: 'POST',
@@ -43,14 +65,8 @@ const PAID_STATUSES = ['SUCCESS', 'PAID', 'COMPLETED', 'CAPTURED'];
 const FAILED_STATUSES = ['FAILED', 'FAILURE', 'EXPIRED', 'CANCELLED', 'CANCELED', 'REJECTED'];
 
 // Gateway status is the source of truth
-export async function getUpiOrderStatus(orderId: string): Promise<{
-  paid: boolean;
-  failed: boolean;
-  status: string;
-  gatewayTxnId: string | null;
-  amount: number;
-  raw: object;
-} | null> {
+export async function getUpiOrderStatus(orderId: string): Promise<UpiOrderStatus | null> {
+  if (useSabpaisa()) return getSabpaisaOrderStatus(orderId);
   try {
     const res = await fetch(`${baseUrl()}/api/payment/status/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
     const data = await res.json();

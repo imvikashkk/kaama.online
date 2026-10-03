@@ -10,6 +10,7 @@ interface OrderInfo {
   payeeName: string;
   upiLink: string;
   qrCode: string;
+  checkoutUrl: string;
   expiresAt: string | null;
 }
 
@@ -102,7 +103,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
           verify();
           return;
         }
-        if (o.status !== 'pending' || !o.upiLink) return fail('Payment failed ya cancel ho gaya.');
+        if (o.status !== 'pending' || (!o.upiLink && !o.checkoutUrl)) return fail('Payment failed ya cancel ho gaya.');
         setOrder(o);
         setState('pay');
       })
@@ -116,10 +117,16 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
     const onVisible = () => {
       if (document.visibilityState === 'visible') verify();
     };
+    // /payment/return (loaded inside the checkout iframe) pings us as soon as the gateway is done
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin === window.location.origin && e.data?.type === 'kaama-payment-return') verify();
+    };
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('message', onMessage);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('message', onMessage);
     };
   }, [state, verify]);
 
@@ -151,6 +158,9 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
   }, []);
 
   const canClose = state !== 'success';
+  const checkout = state === 'pay' && !!order?.checkoutUrl;
+  // SabPaisa only allows framing from https pages (frame-ancestors https:), so plain-http dev opens it full page
+  const canFrame = typeof window !== 'undefined' && window.location.protocol === 'https:';
   const color = state === 'success' ? '#22c55e' : state === 'failed' ? RED : YELLOW;
 
   return (
@@ -170,7 +180,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
       <div
         role="dialog"
         aria-modal="true"
-        className="upi-panel relative w-full sm:max-w-sm max-h-[92dvh] overflow-y-auto rounded-t-xl sm:rounded-xl px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5"
+        className={`upi-panel relative w-full ${checkout ? 'sm:max-w-md' : 'sm:max-w-sm'} max-h-[92dvh] overflow-y-auto rounded-t-xl sm:rounded-xl px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5`}
         style={{ background: PANEL, border: `1px solid ${LINE}`, borderTop: `3px solid ${color}` }}
       >
         {canClose && (
@@ -197,7 +207,56 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
           </div>
         )}
 
-        {state === 'pay' && order && (
+        {checkout && order && (
+          <>
+            <div className="pr-10">
+              <p className="m-0 text-[10px] font-bold tracking-[.22em] uppercase text-white/45">{order.planName}</p>
+              <p className="k-display m-0 mt-1 text-[32px] leading-none" style={{ color: YELLOW }}>
+                ₹{order.amount}
+              </p>
+            </div>
+
+            <div className="my-3" style={{ borderTop: `2px dashed ${LINE}` }} />
+
+            {/* SabPaisa hosted checkout — UPI / cards / netbanking all happen inside */}
+            {canFrame ? (
+              <iframe
+                src={order.checkoutUrl}
+                title="SabPaisa checkout"
+                allow="payment"
+                className="block w-full h-[62dvh] sm:h-[560px] rounded-md bg-white"
+                style={{ border: 0 }}
+              />
+            ) : (
+              <a
+                href={order.checkoutUrl}
+                className="flex items-center justify-center w-full h-12 rounded-md text-[14px] font-extrabold no-underline transition-transform active:scale-[.98]"
+                style={{ background: YELLOW, color: INK, boxShadow: `4px 4px 0 ${RED}` }}
+              >
+                Pay ₹{order.amount} →
+              </a>
+            )}
+
+            <div className="flex items-center justify-between gap-2 rounded-md px-3 h-10 mt-3 text-[12px]" style={{ background: 'rgba(245,239,230,.04)' }}>
+              <span className="inline-flex items-center gap-2 text-white/60">
+                <span
+                  className="w-3 h-3 rounded-full border-2 animate-spin"
+                  style={{ borderColor: `${color} transparent ${color} ${color}` }}
+                />
+                Payment ka wait...
+              </span>
+              {left !== null && left > 0 && <span className="k-display text-[16px]" style={{ color: YELLOW }}>{formatLeft(left)}</span>}
+            </div>
+            <p className="m-0 mt-2 text-center text-white/35 text-[11px]">
+              Checkout nahi khul raha?{' '}
+              <a href={order.checkoutUrl} className="underline text-white/60">
+                Full screen me kholo
+              </a>
+            </p>
+          </>
+        )}
+
+        {state === 'pay' && order && !checkout && (
           <>
             {/* Bill */}
             <div className="pr-10">
