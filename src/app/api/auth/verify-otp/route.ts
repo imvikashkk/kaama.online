@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { generateUserToken } from '@/lib/userAuth';
+import { verifyOtp } from '@/lib/meraOtp';
 
 const DEFAULT_SECS = 60 * 60 * 24 * 3; // 3 days if no subscription
 
@@ -17,13 +18,17 @@ export async function POST(req: NextRequest) {
 
     // Latest live OTP only; 5 wrong tries burns it
     const otpRes = await pool.query(
-      `SELECT id, otp FROM otps
+      `SELECT id, message_id FROM otps
        WHERE mobile = $1 AND is_used = false AND expires_at > NOW() AND attempts < 5
+         AND message_id IS NOT NULL
        ORDER BY created_at DESC LIMIT 1`,
       [mobile],
     );
 
-    if (otpRes.rows.length === 0 || otpRes.rows[0].otp !== String(otp)) {
+    const verified =
+      otpRes.rows.length > 0 && (await verifyOtp(otpRes.rows[0].message_id, String(otp)));
+
+    if (!verified) {
       if (otpRes.rows.length > 0) {
         await pool.query(`UPDATE otps SET attempts = attempts + 1 WHERE id = $1`, [otpRes.rows[0].id]);
       }

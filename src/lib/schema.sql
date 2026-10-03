@@ -146,3 +146,8 @@ ALTER TABLE otps ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
 
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'payment'; -- payment | admin
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS note   TEXT;
+
+-- ── MeraOTP (provider generates + verifies the OTP) ──────────────────
+
+ALTER TABLE otps ADD COLUMN IF NOT EXISTS message_id VARCHAR(64);
+ALTER TABLE otps ALTER COLUMN otp DROP NOT NULL;

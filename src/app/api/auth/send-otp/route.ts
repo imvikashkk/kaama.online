@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { randomInt } from 'crypto';
 import { generateUserToken } from '@/lib/userAuth';
-import { sendOtpSms } from '@/lib/sms';
+import { sendOtp } from '@/lib/meraOtp';
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,19 +78,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, isSubscribed: true });
       }
 
-      const otp = String(randomInt(100000, 1000000));
-      await pool.query(
-        `INSERT INTO otps (mobile, otp, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')`,
-        [mobile, otp],
-      );
-
-      const sent = await sendOtpSms(mobile, otp);
-      if (!sent) {
+      const messageId = await sendOtp(mobile);
+      if (!messageId) {
         return NextResponse.json(
           { success: false, message: 'OTP send nahi ho saka. Please try again.' },
           { status: 502 },
         );
       }
+      await pool.query(
+        `INSERT INTO otps (mobile, message_id, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')`,
+        [mobile, messageId],
+      );
       return NextResponse.json({ success: true, isSubscribed: true });
     }
 
