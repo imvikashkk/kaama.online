@@ -80,7 +80,10 @@ export async function createSabpaisaOrder(
       vpa: '',
       upiLink: '',
       qrCode: '',
-      checkoutUrl: String(data.checkoutUrl),
+      // Checkout refuses to load without the session's clientSecret appended
+      checkoutUrl: data.clientSecret
+        ? `${data.checkoutUrl}${String(data.checkoutUrl).includes('?') ? '&' : '?'}clientSecret=${encodeURIComponent(data.clientSecret)}`
+        : String(data.checkoutUrl),
       // SabPaisa's own expiresAt carries no timezone, so derive it here
       expiresAt: new Date(Date.now() + EXPIRY_MINUTES * 60 * 1000).toISOString(),
     };
