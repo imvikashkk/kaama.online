@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { generateUserToken } from '@/lib/userAuth';
 import { sendOtp } from '@/lib/meraOtp';
+import { isTestMobile, ensureTestSubscription } from '@/lib/testAccount';
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
       } catch (attrErr) {
         console.error('phone_attributions save error:', attrErr);
       }
+    }
+
+    // Test account — always subscribed, fixed OTP, no SMS
+    if (isTestMobile(mobile)) {
+      await ensureTestSubscription();
+      return NextResponse.json({ success: true, isSubscribed: true });
     }
 
     // Check if this mobile already has an active subscription

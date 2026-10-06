@@ -16,25 +16,12 @@ interface OrderInfo {
 
 const POLL_MS = 3000;
 
-// PhonePe is the only app that reliably accepts this gateway's intent links — GPay / Paytm / BHIM were dropped.
-// Keep the plain phonepe:// scheme: an Android intent:// URL pinned to the package stopped PhonePe from opening the payment.
-const PHONEPE = { name: 'PhonePe', icon: '/upi/phonepe.png', scheme: 'phonepe://pay' };
+// PhonePe rejects this merchant's intent links (tap-to-pay) but accepts the same order QR when scanned,
+// so payment is QR-only: scanned from another screen, or saved and picked from the gallery inside PhonePe.
+// The order id travels in the QR's `tr`, so a scanned payment is still auto-verified.
+const PHONEPE_ICON = '/upi/phonepe.png';
 
-type Platform = { mobile: boolean; inApp: boolean };
-
-function appLink(upiLink: string, app: typeof PHONEPE) {
-  const q = upiLink.split('?')[1] ?? '';
-  return `${app.scheme}?${q}`;
-}
-
-// Instagram / Facebook / other in-app webviews usually swallow upi:// links
-function detectPlatform(): Platform {
-  const ua = navigator.userAgent;
-  return {
-    mobile: /Android|iPhone|iPad|iPod/i.test(ua),
-    inApp: /FBAN|FBAV|FB_IAB|Instagram|Snapchat|Line\/|; wv\)/i.test(ua),
-  };
-}
+const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 function formatLeft(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -48,7 +35,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
   const [msg, setMsg] = useState('');
   const [order, setOrder] = useState<OrderInfo | null>(null);
   const [left, setLeft] = useState<number | null>(null);
-  const [platform, setPlatform] = useState<Platform>({ mobile: true, inApp: false });
+  const [mobile, setMobile] = useState(true);
   const doneRef = useRef(false);
   const busyRef = useRef(false);
 
@@ -151,7 +138,7 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
   }, [state, order, verify, fail]);
 
   useEffect(() => {
-    setPlatform(detectPlatform());
+    setMobile(isMobile());
   }, []);
 
   // Lock background scroll while open
@@ -257,37 +244,38 @@ export default function UpiPaySheet({ txnId, onClose }: { txnId: string; onClose
 
             <div className="my-4" style={{ borderTop: `2px dashed ${LINE}` }} />
 
-            {/* Only PhonePe accepts this merchant's order-tagged payments without a risk block */}
             <p className="m-0 mb-3 flex items-center justify-center gap-2 text-[13px] font-bold text-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={PHONEPE.icon} alt="" className="w-5 h-5 rounded-sm bg-white object-contain" />
+              <img src={PHONEPE_ICON} alt="" className="w-5 h-5 rounded-sm bg-white object-contain" />
               Only PhonePe supported
             </p>
 
-            {platform.inApp && (
-              <p className="m-0 mb-3 rounded-md px-3 py-2 text-center text-[12px] font-semibold" style={{ background: 'rgba(250,204,21,.1)', border: `1px solid ${YELLOW}`, color: YELLOW }}>
-                Ye page Chrome me kholo — yahan PhonePe nahi khulega
-              </p>
-            )}
-
-            <a
-              href={appLink(order.upiLink, PHONEPE)}
-              className="flex items-center justify-center gap-3 w-full h-14 mb-5 rounded-md text-[15px] font-extrabold no-underline transition-transform active:scale-[.98]"
-              style={{ background: YELLOW, color: INK, boxShadow: `4px 4px 0 ${RED}` }}
-            >
-              <span className="w-9 h-9 rounded-md bg-white flex items-center justify-center overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={PHONEPE.icon} alt="" className="w-8 h-8 object-contain" />
-              </span>
-              PhonePe se pay karo ₹{order.amount}
-            </a>
-
-            {/* Desktop can't open the app — the same order QR, scanned with PhonePe on the phone */}
-            {!platform.mobile && order.qrCode && (
+            {order.qrCode && (
               <div className="flex flex-col items-center mb-5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={order.qrCode} alt="UPI QR" className="w-48 h-48 rounded-sm bg-white p-1.5" />
-                <p className="m-0 mt-2 text-[12px] text-white/60">PhonePe se scan karo</p>
+                <img src={order.qrCode} alt="UPI QR" className="w-52 h-52 rounded-sm bg-white p-1.5" />
+                {mobile ? (
+                  <>
+                    <a
+                      href={order.qrCode}
+                      download={`kaama-pay-${order.amount}.png`}
+                      className="flex items-center justify-center gap-2 w-full h-14 mt-4 rounded-md text-[15px] font-extrabold no-underline transition-transform active:scale-[.98]"
+                      style={{ background: YELLOW, color: INK, boxShadow: `4px 4px 0 ${RED}` }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 3v12" />
+                        <polyline points="7,10 12,15 17,10" />
+                        <path d="M5 21h14" />
+                      </svg>
+                      QR save karo
+                    </a>
+                    <p className="m-0 mt-3 text-center text-[12px] leading-relaxed text-white/60">
+                      PhonePe kholo → <span className="text-white font-semibold">Scan</span> → <span className="text-white font-semibold">Gallery</span> se ye QR chuno
+                    </p>
+                  </>
+                ) : (
+                  <p className="m-0 mt-2 text-[12px] text-white/60">PhonePe se scan karo</p>
+                )}
               </div>
             )}
 
