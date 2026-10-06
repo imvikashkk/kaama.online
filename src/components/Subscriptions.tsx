@@ -165,6 +165,20 @@ export default function SubscriptionsPage() {
         @keyframes kSpin { to { transform: rotate(360deg); } }
       `}</style>
 
+      {/* Same collage as /auth, dimmed so the plan tickets stay readable */}
+      <div className="fixed inset-0 overflow-hidden" aria-hidden>
+        <picture>
+          <source media="(max-width: 1023px)" srcSet="/assets/image/auth_bg_mobile.jpg" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/image/auth_bg.png"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-top lg:object-center"
+          />
+        </picture>
+        <div className="absolute inset-0" style={{ background: 'rgba(12,8,9,.72)' }} />
+      </div>
+
       <SiteHeader
         right={
           <>

@@ -21,9 +21,6 @@ export function KaamaLogo() {
       <span className="text-[10px] font-bold tracking-[.25em] px-1.5 py-0.5 rounded" style={{ color: INK, background: YELLOW }}>
         OTT
       </span>
-      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white" style={{ background: RED }}>
-        18+
-      </span>
     </div>
   );
 }
@@ -31,7 +28,6 @@ export function KaamaLogo() {
 // Hot one-liners for the two scrolling strips — Hinglish, short, high-contrast
 const TOP_LINES: ReactNode[] = [
   <>Raat ka asli <Hot>मज़ा</Hot> 🔥</>,
-  <>No Censor 🔞</>,
   <>हर हफ्ते नई <Hot>HOT</Hot> सीरीज़ 💋</>,
   <>Full HD 📺</>,
   <>Bold कहानियाँ 🌶️</>,
@@ -39,7 +35,6 @@ const TOP_LINES: ReactNode[] = [
 ];
 const BOTTOM_LINES: ReactNode[] = [
   <>Dil ki dhadkan <Hot>tez</Hot> ❤️‍🔥</>,
-  <>Sirf 18+ ke liye 🔞</>,
   <>Desi <Hot>romance</Hot> 💕</>,
   <>Mobile pe dekho 📱</>,
   <>हॉट &amp; बोल्ड 🔥</>,
@@ -165,7 +160,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
           {children}
 
           <p className="mt-5 text-center text-xs leading-relaxed text-white/60">
-            Sirf 18+ ke liye. Aage badhne par aap{' '}
+            Aage badhne par aap{' '}
             <Link href="/terms" className="text-white underline underline-offset-2">
               Terms
             </Link>{' '}

@@ -93,9 +93,6 @@ export default function AuthPage() {
         <h1 className="mt-5 text-[28px] font-extrabold leading-tight">
           Sabse <Hot>HOT</Hot> <span className="whitespace-nowrap">Web Series 🔥</span>
         </h1>
-        <p className="mt-1 text-lg font-bold text-white/90">
-          बिना सेंसर, सिर्फ़ <span style={{ color: YELLOW }}>18+</span> के लिए
-        </p>
       </div>
 
       <form
