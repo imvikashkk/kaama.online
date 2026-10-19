@@ -13,6 +13,7 @@ const UI_META: { badge: string | null }[] = [
   { badge: null },
   { badge: 'Most popular' },
   { badge: 'Best value' },
+  { badge: 'Forever' },
 ];
 
 interface ApiPlan {
