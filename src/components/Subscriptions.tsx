@@ -30,6 +30,7 @@ interface Plan extends ApiPlan {
 }
 
 function formatDuration(days: number): string {
+  if (days >= 36500) return 'Lifetime';
   if (days >= 365) return `${Math.round(days / 365)} Year`;
   if (days >= 30)
     return `${Math.round(days / 30)} Month${Math.round(days / 30) > 1 ? 's' : ''}`;

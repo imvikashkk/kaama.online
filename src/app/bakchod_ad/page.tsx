@@ -585,7 +585,7 @@ function GrantForm({ plans, onDone, onCancel }: { plans: PlanOpt[]; onDone: () =
           <label className={labelCls}>Plan</label>
           <select value={planId} onChange={(e) => pickPlan(Number(e.target.value))} className={inputCls} style={inputStyle}>
             {plans.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — ₹{p.price} / {p.duration_days}d</option>
+              <option key={p.id} value={p.id}>{p.name} — ₹{p.price} / {p.duration_days >= 36500 ? 'Lifetime' : `${p.duration_days}d`}</option>
             ))}
           </select>
         </div>

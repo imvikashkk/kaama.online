@@ -27,6 +27,7 @@ function formatExpiry(dateStr: string | null) {
 
 function formatDuration(days: number | null) {
   if (!days) return null;
+  if (days >= 36500) return 'Lifetime';
   if (days >= 365) return `${Math.round(days / 365)} Year`;
   if (days >= 30)
     return `${Math.round(days / 30)} Month${Math.round(days / 30) > 1 ? 's' : ''}`;
@@ -138,12 +139,14 @@ export default function ProfilePage() {
       ? {}
       : { animation: `kRise .5s cubic-bezier(.22,1,.36,1) ${delay} both` };
 
+  const isLifetime = hasSub && (profile.duration_days ?? 0) >= 36500;
   // Share of the plan still left — drives the meter on the pass
-  const leftPct =
-    hasSub && profile.duration_days && profile.days_left !== null
+  const leftPct = isLifetime
+    ? 100
+    : hasSub && profile.duration_days && profile.days_left !== null
       ? Math.max(4, Math.min(100, Math.round((profile.days_left / profile.duration_days) * 100)))
       : 0;
-  const low = profile?.days_left !== null && profile?.days_left !== undefined && profile.days_left <= 3;
+  const low = !isLifetime && profile?.days_left !== null && profile?.days_left !== undefined && profile.days_left <= 3;
 
   return (
     <main className="k-body k-grain relative min-h-[100dvh] overflow-x-hidden">
@@ -224,7 +227,7 @@ export default function ProfilePage() {
             <div className="px-5 py-4" style={{ borderTop: `2px dashed ${INK}33` }}>
               <div className="flex items-baseline justify-between">
                 <span className="k-display text-[26px]" style={{ color: low ? RED : INK }}>
-                  {profile.days_left === 0 ? 'Aaj khatam' : `${profile.days_left} din baaki`}
+                  {isLifetime ? 'Lifetime' : profile.days_left === 0 ? 'Aaj khatam' : `${profile.days_left} din baaki`}
                 </span>
                 <span className="text-[11px] font-semibold opacity-60">{leftPct}%</span>
               </div>
